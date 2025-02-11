@@ -1,0 +1,48 @@
+---Create a table first to add where the data should be placed
+
+CREATE TABLE sales_data (
+    Date DATE,
+    Product VARCHAR(50),
+    Price NUMERIC(10,2),
+    No_Transactions INT,
+    Sales NUMERIC(15,2),
+    Payment_Method VARCHAR(20)
+);
+
+---add Generate sequential numbers using RECURSIVE function
+
+WITH RECURSIVE generate_series AS (
+    SELECT 1 AS id
+    UNION ALL
+    SELECT id + 1 FROM generate_series WHERE id < 500
+),
+products AS (
+    SELECT 
+        generate_series.id AS product_id,
+        'Product ' || generate_series.id AS Product, 
+        ROUND((random() * 500 + 10)::numeric, 2) AS Price -- Price between 10 and 510
+    FROM generate_series
+    WHERE id <= 10 -- Limit to 10 unique products
+),
+transactions AS (
+    SELECT 
+        generate_series.id AS trans_id,
+        (floor(random() * 50) + 1) AS No_Transactions,
+        (generate_series.id % 10 + 1) AS product_id -- Assign transactions to products
+    FROM generate_series
+)
+
+---insert the data into the table (sales_data) 
+INSERT INTO sales_data (Date, Product, Price, No_Transactions, Sales, Payment_Method)
+SELECT 
+    (CURRENT_DATE - (random() * 365)::int) AS Date,
+    p.Product,
+    p.Price,
+    t.No_Transactions,
+    ROUND((p.Price * t.No_Transactions)::numeric, 2) AS Sales,
+    (ARRAY['Credit Card', 'Debit Card', 'Cash', 'E-Wallet'])[floor(random() * 4) + 1] AS Payment_Method
+FROM transactions t
+JOIN products p ON t.product_id = p.product_id;
+
+--- Check if it work by calling some of the data
+SELECT * FROM sales_data LIMIT 10;
